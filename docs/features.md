@@ -320,7 +320,7 @@ Hooks intercept and modify behavior at key points in the agent lifecycle.
 
 | Hook | Event | Description |
 |------|-------|-------------|
-| **directory-agents-injector** | PostToolUse | Auto-injects AGENTS.md when reading files. Walks from file to project root, collecting all AGENTS.md files. |
+| **directory-agents-injector** | PostToolUse | Auto-injects AGENTS.md when reading files. Walks from file to project root, collecting all AGENTS.md files. **Deprecated for OpenCode 1.1.37+** - Auto-disabled when native AGENTS.md injection is available. |
 | **directory-readme-injector** | PostToolUse | Auto-injects README.md for directory context. |
 | **rules-injector** | PostToolUse | Injects rules from `.claude/rules/` when conditions match. Supports globs and alwaysApply. |
 | **compaction-context-injector** | Stop | Preserves critical context during session compaction. |
@@ -520,6 +520,37 @@ mcp:
 ```
 
 The `skill_mcp` tool invokes these operations with full schema discovery.
+
+#### OAuth-Enabled MCPs
+
+Skills can define OAuth-protected remote MCP servers. OAuth 2.1 with full RFC compliance (RFC 9728, 8414, 8707, 7591) is supported:
+
+```yaml
+---
+description: My API skill
+mcp:
+  my-api:
+    url: https://api.example.com/mcp
+    oauth:
+      clientId: ${CLIENT_ID}
+      scopes: ["read", "write"]
+---
+```
+
+When a skill MCP has `oauth` configured:
+- **Auto-discovery**: Fetches `/.well-known/oauth-protected-resource` (RFC 9728), falls back to `/.well-known/oauth-authorization-server` (RFC 8414)
+- **Dynamic Client Registration**: Auto-registers with servers supporting RFC 7591 (clientId becomes optional)
+- **PKCE**: Mandatory for all flows
+- **Resource Indicators**: Auto-generated from MCP URL per RFC 8707
+- **Token Storage**: Persisted in `~/.config/opencode/mcp-oauth.json` (chmod 0600)
+- **Auto-refresh**: Tokens refresh on 401; step-up authorization on 403 with `WWW-Authenticate`
+- **Dynamic Port**: OAuth callback server uses an auto-discovered available port
+
+Pre-authenticate via CLI:
+
+```bash
+bunx oh-my-opencode mcp oauth login <server-name> --server-url https://api.example.com
+```
 
 ---
 
